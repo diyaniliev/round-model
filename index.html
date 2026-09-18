@@ -72,14 +72,28 @@
       .grid.c2 { grid-template-columns: 1fr 1fr; }
       .grid.c3 { grid-template-columns: repeat(3, 1fr); }
       .grid.c4 { grid-template-columns: repeat(4, 1fr); }
+      .grid.align-end { align-items: end; }
       @media (max-width: 760px) { .grid.c2,.grid.c3,.grid.c4 { grid-template-columns: 1fr; } .head-inner{flex-wrap:wrap;} }
-      label.field { display: flex; flex-direction: column; gap: 5px; }
-      label.field .lab { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+      label.field, .field { display: flex; flex-direction: column; gap: 5px; }
+      label.field .lab, .field .lab { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+      .grid.align-end label.field .lab, .grid.align-end .field .lab { min-height: 2.6em; }
       input[type="number"], input[type="text"], input[type="password"] {
         border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px;
         background: #fff; color: var(--ink); width: 100%;
       }
       input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+      input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+      .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+      .switch {
+        width: 36px; height: 20px; border-radius: 999px; background: #d5d9de; border: none;
+        padding: 0; cursor: pointer; position: relative; flex-shrink: 0;
+      }
+      .switch.on { background: var(--accent); }
+      .switch span {
+        position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+        background: #fff; display: block;
+      }
+      .switch.on span { left: 18px; }
       .pillrow { display: flex; gap: 8px; flex-wrap: wrap; }
       .pill { border: 1px solid var(--line); background: #fff; color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
       .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -90,7 +104,7 @@
       td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
       tr.total td { font-weight: 700; background: #fafbfc; }
       tr.investor td { background: var(--accent-soft); }
-      tr.me td { font-weight: 600; }
+      td.c, th.c { text-align: center; }
       .dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px; vertical-align: baseline; }
       .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
       .stat .v { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
@@ -136,7 +150,7 @@
         { id: "4BP", shares: 76, pct: 30.4, color: "#2f6db0" },
         { id: "CB", shares: 68, pct: 27.2, color: "#3f8f5f" },
         { id: "JOvB", shares: 68, pct: 27.2, color: "#b5762a" },
-        { id: "DI", shares: 19, pct: 7.6, color: "#8a6bbf", me: true },
+        { id: "DI", shares: 19, pct: 7.6, color: "#8a6bbf" },
         { id: "PS", shares: 19, pct: 7.6, color: "#b23b4a" },
       ];
       const TOTAL_SHARES = OWNERS.reduce((s, o) => s + o.shares, 0); // 250
@@ -160,24 +174,34 @@
       }
 
       // ------- Round math -------
-      function computeRound(pre, raise) {
-        const post = pre + raise;
-        const newInvPct = post > 0 ? (raise / post) * 100 : 0;
-        const retention = post > 0 ? pre / post : 0;
-        const newShares = pre > 0 ? (TOTAL_SHARES * raise) / pre : 0;
+      function computeRound(pre, equity, followed) {
+        followed = followed || {};
+        const post = pre + equity;
+        const newShares = pre > 0 ? (TOTAL_SHARES * equity) / pre : 0;
         const totalSharesAfter = TOTAL_SHARES + newShares;
         const owners = OWNERS.map((o) => {
-          const after = o.pct * retention;
+          const follows = !!followed[o.id];
+          const bought = follows ? (o.shares / TOTAL_SHARES) * newShares : 0;
+          const sharesAfter = o.shares + bought;
+          const after = totalSharesAfter > 0 ? (sharesAfter / totalSharesAfter) * 100 : o.pct;
+          const dilPP = o.pct - after;
           return {
             ...o,
+            follows,
+            bought,
+            sharesAfter,
             after,
-            dilPP: o.pct - after,
-            relDil: o.pct ? ((o.pct - after) / o.pct) * 100 : 0,
-            proRata: (o.pct / 100) * raise,
+            dilPP,
+            relDil: o.pct ? (dilPP / o.pct) * 100 : 0,
+            proRata: (o.pct / 100) * equity,
             paper: (after / 100) * post,
           };
         });
-        return { pre, raise, post, newInvPct, retention, newShares, totalSharesAfter, owners };
+        const followedPct = owners.filter((o) => o.follows).reduce((s, o) => s + o.pct, 0);
+        const newInvShares = newShares * (1 - followedPct / 100);
+        const newInvPct = totalSharesAfter > 0 ? (newInvShares / totalSharesAfter) * 100 : 0;
+        const newInvCash = equity * (1 - followedPct / 100);
+        return { pre, equity, post, newInvPct, newShares, newInvShares, newInvCash, totalSharesAfter, owners, followedPct };
       }
 
       function ownerExit(afterPct, newInvPct, exit, raise, liqX) {
@@ -314,10 +338,16 @@
       }
 
       // ================= Fund-raise tab =================
-      function FundRaiseTab({ pre, setPre, raise, setRaise }) {
+      function FundRaiseTab({ pre, setPre, raise, setRaise, almiOn, setAlmiOn, almiAmt, setAlmiAmt, followed, setFollowed }) {
         const preN = Number(pre) || 0;
         const raiseN = Number(raise) || 0;
-        const R = computeRound(preN, raiseN);
+        const almiN = almiOn ? Math.max(Number(almiAmt) || 0, 0) : 0;
+        const equityN = Math.max(raiseN - almiN, 0);
+        const R = computeRound(preN, equityN, followed);
+
+        function toggleFollow(id, checked) {
+          setFollowed(Object.assign({}, followed, { [id]: checked }));
+        }
 
         return (
           <div>
@@ -328,16 +358,36 @@
               <div className="card">
                 <div className="card-head">Editable inputs</div>
                 <div className="card-body">
-                  <div className="grid c2">
+                  <div className="grid c2 align-end">
                     <label className="field"><span className="lab">Total raise (MSEK)</span>
                       <input type="number" value={raise} onChange={(e) => setRaise(e.target.value)} /></label>
                     <label className="field"><span className="lab">Desired valuation — pre-money (MSEK)</span>
                       <input type="number" value={pre} onChange={(e) => setPre(e.target.value)} /></label>
                   </div>
+                  <div className="toggle-row">
+                    <button type="button" className={"switch" + (almiOn ? " on" : "")} onClick={() => setAlmiOn(!almiOn)} aria-label="ALMI loan">
+                      <span></span>
+                    </button>
+                    <div>
+                      <div style={{ fontWeight: 600 }}>Fund part of the raise with an ALMI loan</div>
+                      <div className="muted">Debt is non-dilutive. Only the remaining amount is raised as equity.</div>
+                    </div>
+                  </div>
+                  {almiOn && (
+                    <label className="field" style={{ marginTop: 12 }}>
+                      <span className="lab">ALMI loan amount (MSEK)</span>
+                      <input type="number" value={almiAmt} onChange={(e) => setAlmiAmt(e.target.value)} />
+                    </label>
+                  )}
                   <div className="grid c2" style={{ marginTop: 14 }}>
-                    <div className="stat"><div className="v">{fmtM(R.post)}</div><div className="l">Post-money</div></div>
+                    <div className="stat"><div className="v">{fmtM(R.post)}</div><div className="l">Post-money (equity)</div></div>
                     <div className="stat acc"><div className="v">{fmtPct(R.newInvPct)}</div><div className="l">New investors' stake</div></div>
                   </div>
+                  {almiOn && (
+                    <p className="muted" style={{ marginTop: 10 }}>
+                      Total cash in: {fmtM(raiseN)} SEK = {fmtM(equityN)} equity + {fmtM(almiN)} ALMI loan.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -348,8 +398,8 @@
                     <thead><tr><th>Owner</th><th className="r">Shares</th><th className="r">Ownership</th></tr></thead>
                     <tbody>
                       {OWNERS.map((o) => (
-                        <tr key={o.id} className={o.me ? "me" : ""}>
-                          <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                        <tr key={o.id}>
+                          <td><span className="dot" style={{ background: o.color }}></span>{o.id}</td>
                           <td className="r">{o.shares}</td>
                           <td className="r">{fmtPct(o.pct, 1)}</td>
                         </tr>
@@ -362,19 +412,23 @@
             </div>
 
             <h2>Dilution by valuation</h2>
-            <p className="muted">At {fmtM(preN)} pre-money · {fmtM(raiseN)} raise · post-money {fmtM(R.post)}.</p>
+            <p className="muted">
+              At {fmtM(preN)} pre-money · {fmtM(equityN)} equity
+              {almiOn ? ` + ${fmtM(almiN)} ALMI loan` : ""} · post-money {fmtM(R.post)}.
+            </p>
             <table>
               <thead>
                 <tr>
-                  <th>Owner</th><th className="r">Shares</th><th className="r">Now</th><th className="r">After</th>
+                  <th>Owner</th><th className="r">Shares now</th><th className="r">Shares after</th><th className="r">Now</th><th className="r">After</th>
                   <th className="r">Dilution (pp)</th><th className="r">Relative</th><th className="r">Paper value</th>
                 </tr>
               </thead>
               <tbody>
                 {R.owners.map((o) => (
-                  <tr key={o.id} className={o.me ? "me" : ""}>
-                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                  <tr key={o.id}>
+                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.follows ? " · follows" : ""}</td>
                     <td className="r">{o.shares}</td>
+                    <td className="r">{num(o.sharesAfter)}</td>
                     <td className="r">{fmtPct(o.pct, 1)}</td>
                     <td className="r">{fmtPct(o.after)}</td>
                     <td className="r">{o.dilPP.toFixed(2)}</td>
@@ -384,17 +438,57 @@
                 ))}
                 <tr className="investor">
                   <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors</td>
-                  <td className="r">{num(R.newShares)}</td>
+                  <td className="r">—</td>
+                  <td className="r">{num(R.newInvShares)}</td>
                   <td className="r">—</td>
                   <td className="r">{fmtPct(R.newInvPct)}</td>
                   <td className="r">—</td>
                   <td className="r">—</td>
-                  <td className="r">{fmtSEK(raiseN)}</td>
+                  <td className="r">{fmtSEK(R.newInvCash)}</td>
                 </tr>
                 <tr className="total">
-                  <td>Total</td><td className="r">{num(R.totalSharesAfter)}</td>
+                  <td>Total</td><td className="r">{TOTAL_SHARES}</td><td className="r">{num(R.totalSharesAfter)}</td>
                   <td className="r">100.0%</td><td className="r">100.0%</td>
                   <td className="r">—</td><td className="r">—</td><td className="r">{fmtSEK(R.post)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2>Pro rata — cost to avoid dilution</h2>
+            <div className="callout info"><div className="t">Each owner's pro rata = their ownership % × equity raised</div>
+              Check <b>Pro-rata followed</b> if that owner invests in the round. Followers keep their current %.
+              Non-followers are diluted. External investors take whatever is left of the {fmtM(equityN)} SEK equity raise.</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Owner</th>
+                  <th className="c">Pro-rata followed</th>
+                  <th className="r">Ownership</th>
+                  <th className="r">Pro rata cheque</th>
+                </tr>
+              </thead>
+              <tbody>
+                {R.owners.map((o) => (
+                  <tr key={o.id}>
+                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}</td>
+                    <td className="c">
+                      <input type="checkbox" checked={!!followed[o.id]} onChange={(e) => toggleFollow(o.id, e.target.checked)} />
+                    </td>
+                    <td className="r">{fmtPct(o.pct, 1)}</td>
+                    <td className="r">{fmtSEK(o.proRata)}</td>
+                  </tr>
+                ))}
+                <tr className="total">
+                  <td>Existing owners (if all followed)</td>
+                  <td></td>
+                  <td className="r">100.0%</td>
+                  <td className="r">{fmtSEK(equityN)}</td>
+                </tr>
+                <tr className="investor">
+                  <td>External investors fill the rest</td>
+                  <td></td>
+                  <td className="r">{fmtPct(100 - R.followedPct)}</td>
+                  <td className="r">{fmtSEK(R.newInvCash)}</td>
                 </tr>
               </tbody>
             </table>
@@ -404,47 +498,35 @@
               {R.owners.map((o) => (
                 <div key={o.id} style={{ width: `${o.after}%`, background: o.color }} title={`${o.id}: ${fmtPct(o.after)}`}></div>
               ))}
-              <div style={{ width: `${R.newInvPct}%`, background: INVESTOR_COLOR }} title={`New investors: ${fmtPct(R.newInvPct)}`}></div>
+              {R.newInvPct > 0.001 && (
+                <div style={{ width: `${R.newInvPct}%`, background: INVESTOR_COLOR }} title={`New investors: ${fmtPct(R.newInvPct)}`}></div>
+              )}
             </div>
             <div className="legend">
               {R.owners.map((o) => (
                 <div className="item" key={o.id}><span className="dot" style={{ background: o.color }}></span>{o.id} {fmtPct(o.after, 1)}</div>
               ))}
-              <div className="item"><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors {fmtPct(R.newInvPct, 1)}</div>
+              {R.newInvPct > 0.001 && (
+                <div className="item"><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors {fmtPct(R.newInvPct, 1)}</div>
+              )}
             </div>
             <table style={{ marginTop: 14 }}>
               <thead><tr><th>Holder</th><th className="r">Before</th><th className="r">After</th><th className="r">Change (pp)</th></tr></thead>
               <tbody>
                 {R.owners.map((o) => (
-                  <tr key={o.id} className={o.me ? "me" : ""}>
-                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                  <tr key={o.id}>
+                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.follows ? " · follows" : ""}</td>
                     <td className="r">{fmtPct(o.pct, 1)}</td>
                     <td className="r">{fmtPct(o.after)}</td>
-                    <td className="r">-{o.dilPP.toFixed(2)}</td>
+                    <td className="r">{o.dilPP === 0 ? "0.00" : "-" + o.dilPP.toFixed(2)}</td>
                   </tr>
                 ))}
-                <tr className="investor">
-                  <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors</td>
-                  <td className="r">0.0%</td><td className="r">{fmtPct(R.newInvPct)}</td><td className="r">+{R.newInvPct.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <h2>Pro rata — cost to avoid dilution</h2>
-            <div className="callout info"><div className="t">Each owner's pro rata = their ownership % × total raise</div>
-              It is the <b>same at any valuation</b>. A low valuation buys more (cheaper) shares for that cheque; a high valuation buys fewer.
-              The cheques below sum to the full {fmtM(raiseN)} SEK raise.</div>
-            <table>
-              <thead><tr><th>Owner</th><th className="r">Ownership</th><th className="r">Pro rata cheque</th></tr></thead>
-              <tbody>
-                {R.owners.map((o) => (
-                  <tr key={o.id} className={o.me ? "me" : ""}>
-                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
-                    <td className="r">{fmtPct(o.pct, 1)}</td>
-                    <td className="r">{fmtSEK(o.proRata)}</td>
+                {R.newInvPct > 0.001 && (
+                  <tr className="investor">
+                    <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors</td>
+                    <td className="r">0.0%</td><td className="r">{fmtPct(R.newInvPct)}</td><td className="r">+{R.newInvPct.toFixed(2)}</td>
                   </tr>
-                ))}
-                <tr className="total"><td>Total</td><td className="r">100.0%</td><td className="r">{fmtSEK(raiseN)}</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -452,16 +534,20 @@
       }
 
       // ================= Exit tab =================
-      function ExitTab({ pre, raise }) {
+      function ExitTab({ pre, raise, almiOn, almiAmt, followed }) {
         const preN = Number(pre) || 0;
         const raiseN = Number(raise) || 0;
-        const R = computeRound(preN, raiseN);
+        const almiN = almiOn ? Math.max(Number(almiAmt) || 0, 0) : 0;
+        const equityN = Math.max(raiseN - almiN, 0);
+        const R = computeRound(preN, equityN, followed);
         const [exit, setExit] = useStored("e_exit", "40");
         const [liq, setLiq] = useStored("e_liq", "1");
         const exitN = Number(exit) || 0;
         const liqX = Number(liq);
-        const inv = investorExit(R.newInvPct, exitN, raiseN, liqX);
-        const ownersTotal = R.owners.reduce((s, o) => s + ownerExit(o.after, R.newInvPct, exitN, raiseN, liqX), 0);
+        const loanRepaid = Math.min(almiN, exitN);
+        const equityPie = Math.max(exitN - loanRepaid, 0);
+        const inv = investorExit(R.newInvPct, equityPie, equityN, liqX);
+        const ownersTotal = R.owners.reduce((s, o) => s + ownerExit(o.after, R.newInvPct, equityPie, equityN, liqX), 0);
 
         return (
           <div>
@@ -471,7 +557,7 @@
             <div className="card">
               <div className="card-head">Exit assumptions</div>
               <div className="card-body">
-                <div className="grid c2">
+                <div className="grid c2 align-end">
                   <label className="field"><span className="lab">Exit / sale value (MSEK)</span>
                     <input type="number" value={exit} onChange={(e) => setExit(e.target.value)} /></label>
                   <div className="field"><span className="lab">Liquidation preference</span>
@@ -482,7 +568,8 @@
                   </div>
                 </div>
                 <p className="muted" style={{ marginTop: 12 }}>
-                  Based on {fmtM(preN)} pre-money / {fmtM(raiseN)} raise. New investors' return (MOIC):
+                  Based on {fmtM(preN)} pre-money / {fmtM(equityN)} equity
+                  {almiOn ? ` + ${fmtM(almiN)} ALMI loan` : ""}. New investors' return (MOIC):
                   <b> {inv.moic.toFixed(2)}×</b> — {inv.moic >= 1 ? "they make money" : "they lose money at this entry price"}.
                 </p>
               </div>
@@ -492,28 +579,38 @@
             <table>
               <thead><tr><th>Holder</th><th className="r">Stake at exit</th><th className="r">Proceeds</th></tr></thead>
               <tbody>
+                {almiN > 0 && (
+                  <tr>
+                    <td>ALMI loan (repaid first)</td>
+                    <td className="r">—</td>
+                    <td className="r">{fmtSEK(loanRepaid)}</td>
+                  </tr>
+                )}
                 {R.owners.map((o) => {
-                  const p = ownerExit(o.after, R.newInvPct, exitN, raiseN, liqX);
+                  const p = ownerExit(o.after, R.newInvPct, equityPie, equityN, liqX);
                   return (
-                    <tr key={o.id} className={o.me ? "me" : ""}>
-                      <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                    <tr key={o.id}>
+                      <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.follows ? " · follows" : ""}</td>
                       <td className="r">{fmtPct(o.after)}</td>
                       <td className="r">{fmtSEK(p)}</td>
                     </tr>
                   );
                 })}
-                <tr className="investor">
-                  <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors ({inv.moic.toFixed(2)}× MOIC)</td>
-                  <td className="r">{fmtPct(R.newInvPct)}</td>
-                  <td className="r">{fmtSEK(inv.takes)}</td>
-                </tr>
+                {R.newInvPct > 0.001 && (
+                  <tr className="investor">
+                    <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors ({inv.moic.toFixed(2)}× MOIC)</td>
+                    <td className="r">{fmtPct(R.newInvPct)}</td>
+                    <td className="r">{fmtSEK(inv.takes)}</td>
+                  </tr>
+                )}
                 <tr className="total">
-                  <td>Total distributed</td><td className="r">100.0%</td><td className="r">{fmtSEK(ownersTotal + inv.takes)}</td>
+                  <td>Total distributed</td><td className="r">100.0%</td><td className="r">{fmtSEK(loanRepaid + ownersTotal + inv.takes)}</td>
                 </tr>
               </tbody>
             </table>
             <p className="muted" style={{ marginTop: 8 }}>
-              With a 1× non-participating preference, investors take the greater of their {fmtM(raiseN)} SEK back or their
+              {almiOn ? "The ALMI loan is repaid from the sale before equity is split. " : ""}
+              With a 1× non-participating preference, investors take the greater of their {fmtM(equityN)} SEK back or their
               as-converted share; owners split the rest. Toggle the preference to see the impact on a small exit.
             </p>
           </div>
@@ -526,6 +623,9 @@
         const [tab, setTab] = useStored("active_tab", "valuation");
         const [pre, setPre] = useStored("fr_pre", "22");
         const [raise, setRaise] = useStored("fr_raise", "2");
+        const [almiOn, setAlmiOn] = useStored("fr_almi", false);
+        const [almiAmt, setAlmiAmt] = useStored("fr_almi_amt", "1");
+        const [followed, setFollowed] = useStored("fr_followed", {});
 
         if (!authed) return <Login onOk={() => setAuthed(true)} />;
 
@@ -545,8 +645,8 @@
             </header>
             <div className="wrap">
               {tab === "valuation" && <ValuationTab />}
-              {tab === "fundraise" && <FundRaiseTab pre={pre} setPre={setPre} raise={raise} setRaise={setRaise} />}
-              {tab === "exit" && <ExitTab pre={pre} raise={raise} />}
+              {tab === "fundraise" && <FundRaiseTab pre={pre} setPre={setPre} raise={raise} setRaise={setRaise} almiOn={almiOn} setAlmiOn={setAlmiOn} almiAmt={almiAmt} setAlmiAmt={setAlmiAmt} followed={followed} setFollowed={setFollowed} />}
+              {tab === "exit" && <ExitTab pre={pre} raise={raise} almiOn={almiOn} almiAmt={almiAmt} followed={followed} />}
               <div className="disclaimer">
                 Illustrative financial model, not legal, tax, or investment advice. Verify the actual cap table, share-class
                 terms, and shareholder agreement before acting.
