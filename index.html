@@ -296,19 +296,19 @@
             <table>
               <thead><tr><th>Position</th><th className="r">Valuation</th><th className="r">Implied multiple</th><th>Read</th></tr></thead>
               <tbody>
-                <tr><td><span className="dot" style={{ background: "var(--warn)" }}></span>Co-founder (low)</td><td className="r">8–12M</td>
+                <tr><td><span className="dot" style={{ background: "var(--warn)" }}></span>Owners suggestion 1 (Low)</td><td className="r">8–12M</td>
                   <td className="r">{(8 / revN).toFixed(2)}–{(12 / revN).toFixed(2)}×</td>
                   <td className="muted">Distressed multiple — too low unless deeply unprofitable</td></tr>
                 <tr><td><span className="dot" style={{ background: "var(--good)" }}></span>Unbiased fair value</td>
                   <td className="r">{fmtM(fairLow)}–{fmtM(revN * 1.2)}</td><td className="r">0.75–1.20×</td>
                   <td className="muted">Defensible for a round closing now (pre-Q4 / pre-AI proof)</td></tr>
-                <tr><td><span className="dot" style={{ background: "var(--danger)" }}></span>Other owner (high)</td><td className="r">50–60M</td>
+                <tr><td><span className="dot" style={{ background: "var(--danger)" }}></span>Owners suggestion 2 (High)</td><td className="r">50–60M</td>
                   <td className="r">{(50 / revN).toFixed(2)}–{(60 / revN).toFixed(2)}×</td>
                   <td className="muted">~35–40× the recent acquisition price — hard to close today</td></tr>
               </tbody>
             </table>
 
-            <div className="callout info"><div className="t">Honour the promise without mispricing the company</div>
+            <div className="callout info"><div className="t">Old investors</div>
               Price the round at fair value (~{fmtM(revN)} SEK) and give the old investors a separate sweetener — a discounted
               tranche, warrants, or a lower entry just for their allocation.</div>
             <div className="callout warn"><div className="t">Biggest missing input: profitability</div>
