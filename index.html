@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Barnebys — Dilution & Valuation Model</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --panel: #ffffff;
+        --ink: #1c2126;
+        --ink-2: #5b636c;
+        --ink-3: #8b929b;
+        --line: #e4e7eb;
+        --line-2: #eef0f3;
+        --accent: #2f6db0;
+        --accent-soft: #eaf1f9;
+        --warn: #b5762a;
+        --warn-soft: #fbf3e6;
+        --danger: #b23b4a;
+        --danger-soft: #fbecee;
+        --good: #3f8f5f;
+        --good-soft: #eaf5ee;
+        --radius: 10px;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      a { color: var(--accent); }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 24px; }
+      header.app {
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        position: sticky; top: 0; z-index: 10;
+      }
+      .head-inner { max-width: 1080px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+      .brand { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; }
+      .brand span { color: var(--ink-3); font-weight: 500; }
+      .spacer { flex: 1; }
+      .tabs { display: flex; gap: 4px; }
+      .tab {
+        appearance: none; border: 1px solid transparent; background: transparent;
+        color: var(--ink-2); font-size: 13px; font-weight: 600; padding: 7px 12px;
+        border-radius: 8px; cursor: pointer;
+      }
+      .tab:hover { background: var(--line-2); color: var(--ink); }
+      .tab.active { background: var(--accent-soft); color: var(--accent); }
+      .btn {
+        appearance: none; border: 1px solid var(--line); background: var(--panel);
+        color: var(--ink-2); font-size: 12px; font-weight: 600; padding: 6px 10px;
+        border-radius: 8px; cursor: pointer;
+      }
+      .btn:hover { border-color: var(--ink-3); color: var(--ink); }
+      h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.3px; }
+      h2 { font-size: 17px; margin: 28px 0 10px; letter-spacing: -0.2px; }
+      .sub { color: var(--ink-2); margin: 0 0 8px; }
+      .muted { color: var(--ink-3); font-size: 12.5px; }
+      .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+      .card .card-head { padding: 10px 14px; border-bottom: 1px solid var(--line-2); font-size: 12px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.4px; }
+      .card .card-body { padding: 16px; }
+      .grid { display: grid; gap: 16px; }
+      .grid.c2 { grid-template-columns: 1fr 1fr; }
+      .grid.c3 { grid-template-columns: repeat(3, 1fr); }
+      .grid.c4 { grid-template-columns: repeat(4, 1fr); }
+      @media (max-width: 760px) { .grid.c2,.grid.c3,.grid.c4 { grid-template-columns: 1fr; } .head-inner{flex-wrap:wrap;} }
+      label.field { display: flex; flex-direction: column; gap: 5px; }
+      label.field .lab { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+      input[type="number"], input[type="text"], input[type="password"] {
+        border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px;
+        background: #fff; color: var(--ink); width: 100%;
+      }
+      input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+      .pillrow { display: flex; gap: 8px; flex-wrap: wrap; }
+      .pill { border: 1px solid var(--line); background: #fff; color: var(--ink-2); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+      .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+      table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+      th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+      th { background: #fafbfc; color: var(--ink-2); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; }
+      tr:last-child td { border-bottom: none; }
+      td.r, th.r { text-align: right; font-variant-numeric: tabular-nums; }
+      tr.total td { font-weight: 700; background: #fafbfc; }
+      tr.investor td { background: var(--accent-soft); }
+      tr.me td { font-weight: 600; }
+      .dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px; vertical-align: baseline; }
+      .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+      .stat .v { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+      .stat .l { color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+      .stat.warn .v { color: var(--warn); }
+      .stat.good .v { color: var(--good); }
+      .stat.acc .v { color: var(--accent); }
+      .callout { border: 1px solid var(--line); border-left-width: 3px; border-radius: 8px; padding: 12px 14px; margin: 10px 0; }
+      .callout .t { font-weight: 700; margin-bottom: 3px; }
+      .callout.info { background: var(--accent-soft); border-left-color: var(--accent); }
+      .callout.warn { background: var(--warn-soft); border-left-color: var(--warn); }
+      .callout.danger { background: var(--danger-soft); border-left-color: var(--danger); }
+      .callout.good { background: var(--good-soft); border-left-color: var(--good); }
+      .barstack { display: flex; height: 26px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+      .barstack > div { height: 100%; }
+      .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+      .legend .item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+      .disclaimer { color: var(--ink-3); font-size: 11.5px; margin-top: 28px; }
+      /* Login */
+      .login-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+      .login-card { width: 100%; max-width: 360px; }
+      .login-card h1 { font-size: 18px; }
+      .err { color: var(--danger); font-size: 12.5px; margin-top: 6px; }
+      .stack { display: flex; flex-direction: column; gap: 12px; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/plain" id="app-src">
+      const { useState, useEffect } = React;
+
+      // ------- Auth config (client-side gate) -------
+      const USERNAME = "barnebys-owners";
+      const PASSWORD_HASH = "545e03f9c7f3bf7a259545ce61a0732776c2048e7ac0e389c677225f8fb8d7eb";
+
+      async function sha256(text) {
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      // ------- Cap table (fixed, not editable) -------
+      const OWNERS = [
+        { id: "4BP", shares: 76, pct: 30.4, color: "#2f6db0" },
+        { id: "CB", shares: 68, pct: 27.2, color: "#3f8f5f" },
+        { id: "JOvB", shares: 68, pct: 27.2, color: "#b5762a" },
+        { id: "DI", shares: 19, pct: 7.6, color: "#8a6bbf", me: true },
+        { id: "PS", shares: 19, pct: 7.6, color: "#b23b4a" },
+      ];
+      const TOTAL_SHARES = OWNERS.reduce((s, o) => s + o.shares, 0); // 250
+      const INVESTOR_COLOR = "#9aa0a6";
+      const REVENUE_MULTIPLES = [0.75, 1.0, 1.5, 2.0, 3.0];
+      const REV_5MO_EUR_K = 808;
+
+      // ------- Formatters -------
+      const fmtM = (m) => `${(Math.round(m * 100) / 100).toLocaleString("en-US")}M`;
+      const fmtSEK = (m) => `${Math.round(m * 1e6).toLocaleString("en-US")} SEK`;
+      const fmtPct = (p, dp = 2) => `${(isFinite(p) ? p : 0).toFixed(dp)}%`;
+      const num = (n) => Math.round(n).toLocaleString("en-US");
+
+      function useStored(key, def) {
+        const [v, setV] = useState(() => {
+          try { const s = localStorage.getItem(key); return s !== null ? JSON.parse(s) : def; }
+          catch (e) { return def; }
+        });
+        useEffect(() => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }, [key, v]);
+        return [v, setV];
+      }
+
+      // ------- Round math -------
+      function computeRound(pre, raise) {
+        const post = pre + raise;
+        const newInvPct = post > 0 ? (raise / post) * 100 : 0;
+        const retention = post > 0 ? pre / post : 0;
+        const newShares = pre > 0 ? (TOTAL_SHARES * raise) / pre : 0;
+        const totalSharesAfter = TOTAL_SHARES + newShares;
+        const owners = OWNERS.map((o) => {
+          const after = o.pct * retention;
+          return {
+            ...o,
+            after,
+            dilPP: o.pct - after,
+            relDil: o.pct ? ((o.pct - after) / o.pct) * 100 : 0,
+            proRata: (o.pct / 100) * raise,
+            paper: (after / 100) * post,
+          };
+        });
+        return { pre, raise, post, newInvPct, retention, newShares, totalSharesAfter, owners };
+      }
+
+      function ownerExit(afterPct, newInvPct, exit, raise, liqX) {
+        const invPct = newInvPct / 100;
+        const asConv = invPct * exit;
+        const pref = liqX * raise;
+        if (liqX > 0 && pref > asConv) {
+          const investorTakes = Math.min(pref, exit);
+          const remaining = Math.max(exit - investorTakes, 0);
+          const nonInv = 100 - newInvPct;
+          return nonInv > 0 ? (afterPct / nonInv) * remaining : 0;
+        }
+        return (afterPct / 100) * exit;
+      }
+      function investorExit(newInvPct, exit, raise, liqX) {
+        const invPct = newInvPct / 100;
+        const asConv = invPct * exit;
+        const pref = liqX * raise;
+        const takes = liqX > 0 && pref > asConv ? Math.min(pref, exit) : asConv;
+        return { takes, moic: raise > 0 ? takes / raise : 0 };
+      }
+
+      // ================= Login =================
+      function Login({ onOk }) {
+        const [u, setU] = useState("");
+        const [p, setP] = useState("");
+        const [err, setErr] = useState("");
+        async function submit(e) {
+          e.preventDefault();
+          const h = await sha256(p);
+          if (u.trim() === USERNAME && h === PASSWORD_HASH) {
+            sessionStorage.setItem("barnebys_auth", "1");
+            onOk();
+          } else {
+            setErr("Incorrect username or password.");
+          }
+        }
+        return (
+          <div className="login-shell">
+            <div className="card login-card">
+              <div className="card-body stack">
+                <div>
+                  <h1>Barnebys — Owner Access</h1>
+                  <p className="muted">This model is restricted. Please sign in.</p>
+                </div>
+                <form className="stack" onSubmit={submit}>
+                  <label className="field">
+                    <span className="lab">Username</span>
+                    <input type="text" value={u} onChange={(e) => setU(e.target.value)} autoFocus />
+                  </label>
+                  <label className="field">
+                    <span className="lab">Password</span>
+                    <input type="password" value={p} onChange={(e) => setP(e.target.value)} />
+                  </label>
+                  {err && <div className="err">{err}</div>}
+                  <button className="pill active" style={{ textAlign: "center" }} type="submit">Sign in</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ================= Company valuation tab =================
+      function ValuationTab() {
+        const [fx, setFx] = useStored("v_fx", "11.3");
+        const [annualRev, setAnnualRev] = useStored("v_rev", "25");
+        const fxN = Number(fx) || 0;
+        const revN = Number(annualRev) || 0;
+        const rev5mo = (REV_5MO_EUR_K / 1000) * fxN;
+        const naive = rev5mo / 5 * 12;
+        const fairLow = revN * 0.75;
+        const fairHigh = revN * 1.5;
+        return (
+          <div>
+            <h1>Company valuation</h1>
+            <p className="sub">What is Barnebys realistically worth? Revenue-multiple estimate.</p>
+
+            <div className="card">
+              <div className="card-head">Revenue inputs</div>
+              <div className="card-body">
+                <div className="grid c2">
+                  <label className="field"><span className="lab">SEK per EUR</span>
+                    <input type="number" value={fx} onChange={(e) => setFx(e.target.value)} /></label>
+                  <label className="field"><span className="lab">Full-year revenue estimate (MSEK)</span>
+                    <input type="number" value={annualRev} onChange={(e) => setAnnualRev(e.target.value)} /></label>
+                </div>
+                <div className="grid c3" style={{ marginTop: 16 }}>
+                  <div className="stat"><div className="v">{fmtM(rev5mo)}</div><div className="l">Apr–Aug actual (5 mo, slow season)</div></div>
+                  <div className="stat"><div className="v">{fmtM(naive)}</div><div className="l">Flat annualization (understates)</div></div>
+                  <div className="stat acc"><div className="v">{fmtM(fairLow)}–{fmtM(fairHigh)}</div><div className="l">Fair value (0.75–1.5× revenue)</div></div>
+                </div>
+              </div>
+            </div>
+
+            <p className="muted" style={{ marginTop: 10 }}>
+              €{REV_5MO_EUR_K}k over 5 months is the <b>slowest</b> window and excludes the Q4 peak, so even a flat
+              annualization understates the run-rate. A normal auction-market seasonal curve puts full-year revenue near {fmtM(revN)} SEK.
+            </p>
+
+            <h2>Implied valuation by revenue multiple</h2>
+            <table>
+              <thead><tr><th>Multiple</th><th className="r">Implied valuation</th><th>When it applies</th></tr></thead>
+              <tbody>
+                {REVENUE_MULTIPLES.map((m, i) => (
+                  <tr key={m}>
+                    <td>{m.toFixed(2)}×</td>
+                    <td className="r">{fmtM(m * revN)} SEK</td>
+                    <td className="muted">{["Distressed, unprofitable, high churn","Stabilized, breakeven, modest growth","Profitable + credible growth","Proven AI/consignment traction, strong Q4","High growth, clean profitability"][i]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h2>The three positions</h2>
+            <table>
+              <thead><tr><th>Position</th><th className="r">Valuation</th><th className="r">Implied multiple</th><th>Read</th></tr></thead>
+              <tbody>
+                <tr><td><span className="dot" style={{ background: "var(--warn)" }}></span>Co-founder (low)</td><td className="r">8–12M</td>
+                  <td className="r">{(8 / revN).toFixed(2)}–{(12 / revN).toFixed(2)}×</td>
+                  <td className="muted">Distressed multiple — too low unless deeply unprofitable</td></tr>
+                <tr><td><span className="dot" style={{ background: "var(--good)" }}></span>Unbiased fair value</td>
+                  <td className="r">{fmtM(fairLow)}–{fmtM(revN * 1.2)}</td><td className="r">0.75–1.20×</td>
+                  <td className="muted">Defensible for a round closing now (pre-Q4 / pre-AI proof)</td></tr>
+                <tr><td><span className="dot" style={{ background: "var(--danger)" }}></span>Other owner (high)</td><td className="r">50–60M</td>
+                  <td className="r">{(50 / revN).toFixed(2)}–{(60 / revN).toFixed(2)}×</td>
+                  <td className="muted">~35–40× the April purchase — hard to close today</td></tr>
+              </tbody>
+            </table>
+
+            <div className="callout info"><div className="t">Honour the promise without mispricing the company</div>
+              Price the round at fair value (~{fmtM(revN)} SEK) and give the old investors a separate sweetener — a discounted
+              tranche, warrants, or a lower entry just for their allocation.</div>
+            <div className="callout warn"><div className="t">Biggest missing input: profitability</div>
+              This is a revenue-based estimate. Actual EBITDA/margin and whether the overdue receivables are slow-payment (fine)
+              or bad debt (a drag) will move the multiple up or down.</div>
+          </div>
+        );
+      }
+
+      // ================= Fund-raise tab =================
+      function FundRaiseTab({ pre, setPre, raise, setRaise }) {
+        const preN = Number(pre) || 0;
+        const raiseN = Number(raise) || 0;
+        const R = computeRound(preN, raiseN);
+
+        return (
+          <div>
+            <h1>Fund-raise</h1>
+            <p className="sub">Enter the desired pre-money valuation and total raise — every table below updates.</p>
+
+            <div className="grid c2">
+              <div className="card">
+                <div className="card-head">Editable inputs</div>
+                <div className="card-body">
+                  <div className="grid c2">
+                    <label className="field"><span className="lab">Total raise (MSEK)</span>
+                      <input type="number" value={raise} onChange={(e) => setRaise(e.target.value)} /></label>
+                    <label className="field"><span className="lab">Desired valuation — pre-money (MSEK)</span>
+                      <input type="number" value={pre} onChange={(e) => setPre(e.target.value)} /></label>
+                  </div>
+                  <div className="grid c2" style={{ marginTop: 14 }}>
+                    <div className="stat"><div className="v">{fmtM(R.post)}</div><div className="l">Post-money</div></div>
+                    <div className="stat acc"><div className="v">{fmtPct(R.newInvPct)}</div><div className="l">New investors' stake</div></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="card-head">Cap table today (fixed)</div>
+                <div className="card-body" style={{ padding: 0 }}>
+                  <table style={{ border: "none", borderRadius: 0 }}>
+                    <thead><tr><th>Owner</th><th className="r">Shares</th><th className="r">Ownership</th></tr></thead>
+                    <tbody>
+                      {OWNERS.map((o) => (
+                        <tr key={o.id} className={o.me ? "me" : ""}>
+                          <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                          <td className="r">{o.shares}</td>
+                          <td className="r">{fmtPct(o.pct, 1)}</td>
+                        </tr>
+                      ))}
+                      <tr className="total"><td>Total</td><td className="r">{TOTAL_SHARES}</td><td className="r">100.0%</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <h2>Dilution by valuation</h2>
+            <p className="muted">At {fmtM(preN)} pre-money · {fmtM(raiseN)} raise · post-money {fmtM(R.post)}.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Owner</th><th className="r">Shares</th><th className="r">Now</th><th className="r">After</th>
+                  <th className="r">Dilution (pp)</th><th className="r">Relative</th><th className="r">Paper value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {R.owners.map((o) => (
+                  <tr key={o.id} className={o.me ? "me" : ""}>
+                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                    <td className="r">{o.shares}</td>
+                    <td className="r">{fmtPct(o.pct, 1)}</td>
+                    <td className="r">{fmtPct(o.after)}</td>
+                    <td className="r">{o.dilPP.toFixed(2)}</td>
+                    <td className="r">{fmtPct(o.relDil, 1)}</td>
+                    <td className="r">{fmtSEK(o.paper)}</td>
+                  </tr>
+                ))}
+                <tr className="investor">
+                  <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors</td>
+                  <td className="r">{num(R.newShares)}</td>
+                  <td className="r">—</td>
+                  <td className="r">{fmtPct(R.newInvPct)}</td>
+                  <td className="r">—</td>
+                  <td className="r">—</td>
+                  <td className="r">{fmtSEK(raiseN)}</td>
+                </tr>
+                <tr className="total">
+                  <td>Total</td><td className="r">{num(R.totalSharesAfter)}</td>
+                  <td className="r">100.0%</td><td className="r">100.0%</td>
+                  <td className="r">—</td><td className="r">—</td><td className="r">{fmtSEK(R.post)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2>Ownership after the round</h2>
+            <div className="barstack">
+              {R.owners.map((o) => (
+                <div key={o.id} style={{ width: `${o.after}%`, background: o.color }} title={`${o.id}: ${fmtPct(o.after)}`}></div>
+              ))}
+              <div style={{ width: `${R.newInvPct}%`, background: INVESTOR_COLOR }} title={`New investors: ${fmtPct(R.newInvPct)}`}></div>
+            </div>
+            <div className="legend">
+              {R.owners.map((o) => (
+                <div className="item" key={o.id}><span className="dot" style={{ background: o.color }}></span>{o.id} {fmtPct(o.after, 1)}</div>
+              ))}
+              <div className="item"><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors {fmtPct(R.newInvPct, 1)}</div>
+            </div>
+            <table style={{ marginTop: 14 }}>
+              <thead><tr><th>Holder</th><th className="r">Before</th><th className="r">After</th><th className="r">Change (pp)</th></tr></thead>
+              <tbody>
+                {R.owners.map((o) => (
+                  <tr key={o.id} className={o.me ? "me" : ""}>
+                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                    <td className="r">{fmtPct(o.pct, 1)}</td>
+                    <td className="r">{fmtPct(o.after)}</td>
+                    <td className="r">-{o.dilPP.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr className="investor">
+                  <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors</td>
+                  <td className="r">0.0%</td><td className="r">{fmtPct(R.newInvPct)}</td><td className="r">+{R.newInvPct.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h2>Pro rata — cost to avoid dilution</h2>
+            <div className="callout info"><div className="t">Each owner's pro rata = their ownership % × total raise</div>
+              It is the <b>same at any valuation</b>. A low valuation buys more (cheaper) shares for that cheque; a high valuation buys fewer.
+              The cheques below sum to the full {fmtM(raiseN)} SEK raise.</div>
+            <table>
+              <thead><tr><th>Owner</th><th className="r">Ownership</th><th className="r">Pro rata cheque</th></tr></thead>
+              <tbody>
+                {R.owners.map((o) => (
+                  <tr key={o.id} className={o.me ? "me" : ""}>
+                    <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                    <td className="r">{fmtPct(o.pct, 1)}</td>
+                    <td className="r">{fmtSEK(o.proRata)}</td>
+                  </tr>
+                ))}
+                <tr className="total"><td>Total</td><td className="r">100.0%</td><td className="r">{fmtSEK(raiseN)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      }
+
+      // ================= Exit tab =================
+      function ExitTab({ pre, raise }) {
+        const preN = Number(pre) || 0;
+        const raiseN = Number(raise) || 0;
+        const R = computeRound(preN, raiseN);
+        const [exit, setExit] = useStored("e_exit", "40");
+        const [liq, setLiq] = useStored("e_liq", "1");
+        const exitN = Number(exit) || 0;
+        const liqX = Number(liq);
+        const inv = investorExit(R.newInvPct, exitN, raiseN, liqX);
+        const ownersTotal = R.owners.reduce((s, o) => s + ownerExit(o.after, R.newInvPct, exitN, raiseN, liqX), 0);
+
+        return (
+          <div>
+            <h1>Exit scenarios</h1>
+            <p className="sub">Proceeds to every holder at a liquidity event (merger or sale) in 18–24 months.</p>
+
+            <div className="card">
+              <div className="card-head">Exit assumptions</div>
+              <div className="card-body">
+                <div className="grid c2">
+                  <label className="field"><span className="lab">Exit / sale value (MSEK)</span>
+                    <input type="number" value={exit} onChange={(e) => setExit(e.target.value)} /></label>
+                  <div className="field"><span className="lab">Liquidation preference</span>
+                    <div className="pillrow">
+                      <button className={"pill" + (liqX === 0 ? " active" : "")} onClick={() => setLiq("0")}>None</button>
+                      <button className={"pill" + (liqX === 1 ? " active" : "")} onClick={() => setLiq("1")}>1× non-participating</button>
+                    </div>
+                  </div>
+                </div>
+                <p className="muted" style={{ marginTop: 12 }}>
+                  Based on {fmtM(preN)} pre-money / {fmtM(raiseN)} raise. New investors' return (MOIC):
+                  <b> {inv.moic.toFixed(2)}×</b> — {inv.moic >= 1 ? "they make money" : "they lose money at this entry price"}.
+                </p>
+              </div>
+            </div>
+
+            <h2>Proceeds by holder at {fmtM(exitN)} SEK exit</h2>
+            <table>
+              <thead><tr><th>Holder</th><th className="r">Stake at exit</th><th className="r">Proceeds</th></tr></thead>
+              <tbody>
+                {R.owners.map((o) => {
+                  const p = ownerExit(o.after, R.newInvPct, exitN, raiseN, liqX);
+                  return (
+                    <tr key={o.id} className={o.me ? "me" : ""}>
+                      <td><span className="dot" style={{ background: o.color }}></span>{o.id}{o.me ? " (you)" : ""}</td>
+                      <td className="r">{fmtPct(o.after)}</td>
+                      <td className="r">{fmtSEK(p)}</td>
+                    </tr>
+                  );
+                })}
+                <tr className="investor">
+                  <td><span className="dot" style={{ background: INVESTOR_COLOR }}></span>New investors ({inv.moic.toFixed(2)}× MOIC)</td>
+                  <td className="r">{fmtPct(R.newInvPct)}</td>
+                  <td className="r">{fmtSEK(inv.takes)}</td>
+                </tr>
+                <tr className="total">
+                  <td>Total distributed</td><td className="r">100.0%</td><td className="r">{fmtSEK(ownersTotal + inv.takes)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="muted" style={{ marginTop: 8 }}>
+              With a 1× non-participating preference, investors take the greater of their {fmtM(raiseN)} SEK back or their
+              as-converted share; owners split the rest. Toggle the preference to see the impact on a small exit.
+            </p>
+          </div>
+        );
+      }
+
+      // ================= App =================
+      function App() {
+        const [authed, setAuthed] = useState(sessionStorage.getItem("barnebys_auth") === "1");
+        const [tab, setTab] = useStored("active_tab", "valuation");
+        const [pre, setPre] = useStored("fr_pre", "22");
+        const [raise, setRaise] = useStored("fr_raise", "2");
+
+        if (!authed) return <Login onOk={() => setAuthed(true)} />;
+
+        return (
+          <div>
+            <header className="app">
+              <div className="head-inner">
+                <div className="brand">Barnebys <span>· Dilution & Valuation Model</span></div>
+                <div className="spacer"></div>
+                <nav className="tabs">
+                  <button className={"tab" + (tab === "valuation" ? " active" : "")} onClick={() => setTab("valuation")}>Company valuation</button>
+                  <button className={"tab" + (tab === "fundraise" ? " active" : "")} onClick={() => setTab("fundraise")}>Fund-raise</button>
+                  <button className={"tab" + (tab === "exit" ? " active" : "")} onClick={() => setTab("exit")}>Exit scenarios</button>
+                </nav>
+                <button className="btn" onClick={() => { sessionStorage.removeItem("barnebys_auth"); setAuthed(false); }}>Sign out</button>
+              </div>
+            </header>
+            <div className="wrap">
+              {tab === "valuation" && <ValuationTab />}
+              {tab === "fundraise" && <FundRaiseTab pre={pre} setPre={setPre} raise={raise} setRaise={setRaise} />}
+              {tab === "exit" && <ExitTab pre={pre} raise={raise} />}
+              <div className="disclaimer">
+                Illustrative financial model, not legal, tax, or investment advice. Verify the actual cap table, share-class
+                terms, and shareholder agreement before acting.
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+    <script>
+      (function () {
+        var src = document.getElementById("app-src").textContent;
+        var out = Babel.transform(src, { presets: [["react", { runtime: "classic" }]] }).code;
+        window.eval(out);
+      })();
+    </script>
+  </body>
+</html>
