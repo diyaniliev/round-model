@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
-    <title>Barnebys — Dilution & Valuation Model</title>
+    <title>Dilution & Valuation Model</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -123,7 +123,7 @@
       const { useState, useEffect } = React;
 
       // ------- Auth config (client-side gate) -------
-      const USERNAME = "barnebys-owners";
+      const USERNAME = "owners";
       const PASSWORD_HASH = "545e03f9c7f3bf7a259545ce61a0732776c2048e7ac0e389c677225f8fb8d7eb";
 
       async function sha256(text) {
@@ -209,7 +209,7 @@
           e.preventDefault();
           const h = await sha256(p);
           if (u.trim() === USERNAME && h === PASSWORD_HASH) {
-            sessionStorage.setItem("barnebys_auth", "1");
+            sessionStorage.setItem("model_auth", "1");
             onOk();
           } else {
             setErr("Incorrect username or password.");
@@ -220,7 +220,7 @@
             <div className="card login-card">
               <div className="card-body stack">
                 <div>
-                  <h1>Barnebys — Owner Access</h1>
+                  <h1>Restricted access</h1>
                   <p className="muted">This model is restricted. Please sign in.</p>
                 </div>
                 <form className="stack" onSubmit={submit}>
@@ -254,7 +254,7 @@
         return (
           <div>
             <h1>Company valuation</h1>
-            <p className="sub">What is Barnebys realistically worth? Revenue-multiple estimate.</p>
+            <p className="sub">What is the company realistically worth? Revenue-multiple estimate.</p>
 
             <div className="card">
               <div className="card-head">Revenue inputs</div>
@@ -275,7 +275,7 @@
 
             <p className="muted" style={{ marginTop: 10 }}>
               €{REV_5MO_EUR_K}k over 5 months is the <b>slowest</b> window and excludes the Q4 peak, so even a flat
-              annualization understates the run-rate. A normal auction-market seasonal curve puts full-year revenue near {fmtM(revN)} SEK.
+              annualization understates the run-rate. A typical seasonal curve puts full-year revenue near {fmtM(revN)} SEK.
             </p>
 
             <h2>Implied valuation by revenue multiple</h2>
@@ -286,7 +286,7 @@
                   <tr key={m}>
                     <td>{m.toFixed(2)}×</td>
                     <td className="r">{fmtM(m * revN)} SEK</td>
-                    <td className="muted">{["Distressed, unprofitable, high churn","Stabilized, breakeven, modest growth","Profitable + credible growth","Proven AI/consignment traction, strong Q4","High growth, clean profitability"][i]}</td>
+                    <td className="muted">{["Distressed, unprofitable, high churn","Stabilized, breakeven, modest growth","Profitable + credible growth","Proven product traction, strong Q4","High growth, clean profitability"][i]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -304,7 +304,7 @@
                   <td className="muted">Defensible for a round closing now (pre-Q4 / pre-AI proof)</td></tr>
                 <tr><td><span className="dot" style={{ background: "var(--danger)" }}></span>Other owner (high)</td><td className="r">50–60M</td>
                   <td className="r">{(50 / revN).toFixed(2)}–{(60 / revN).toFixed(2)}×</td>
-                  <td className="muted">~35–40× the April purchase — hard to close today</td></tr>
+                  <td className="muted">~35–40× the recent acquisition price — hard to close today</td></tr>
               </tbody>
             </table>
 
@@ -527,7 +527,7 @@
 
       // ================= App =================
       function App() {
-        const [authed, setAuthed] = useState(sessionStorage.getItem("barnebys_auth") === "1");
+        const [authed, setAuthed] = useState(sessionStorage.getItem("model_auth") === "1");
         const [tab, setTab] = useStored("active_tab", "valuation");
         const [pre, setPre] = useStored("fr_pre", "22");
         const [raise, setRaise] = useStored("fr_raise", "2");
@@ -538,14 +538,14 @@
           <div>
             <header className="app">
               <div className="head-inner">
-                <div className="brand">Barnebys <span>· Dilution & Valuation Model</span></div>
+                <div className="brand">Dilution & Valuation Model</div>
                 <div className="spacer"></div>
                 <nav className="tabs">
                   <button className={"tab" + (tab === "valuation" ? " active" : "")} onClick={() => setTab("valuation")}>Company valuation</button>
                   <button className={"tab" + (tab === "fundraise" ? " active" : "")} onClick={() => setTab("fundraise")}>Fund-raise</button>
                   <button className={"tab" + (tab === "exit" ? " active" : "")} onClick={() => setTab("exit")}>Exit scenarios</button>
                 </nav>
-                <button className="btn" onClick={() => { sessionStorage.removeItem("barnebys_auth"); setAuthed(false); }}>Sign out</button>
+                <button className="btn" onClick={() => { sessionStorage.removeItem("model_auth"); setAuthed(false); }}>Sign out</button>
               </div>
             </header>
             <div className="wrap">
