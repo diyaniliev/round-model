@@ -243,9 +243,8 @@
 
       // ================= Company valuation tab =================
       function ValuationTab() {
-        const [fx, setFx] = useStored("v_fx", "11.3");
         const [annualRev, setAnnualRev] = useStored("v_rev", "25");
-        const fxN = Number(fx) || 0;
+        const fxN = 11.3;
         const revN = Number(annualRev) || 0;
         const rev5mo = (REV_5MO_EUR_K / 1000) * fxN;
         const naive = rev5mo / 5 * 12;
@@ -259,12 +258,8 @@
             <div className="card">
               <div className="card-head">Revenue inputs</div>
               <div className="card-body">
-                <div className="grid c2">
-                  <label className="field"><span className="lab">SEK per EUR</span>
-                    <input type="number" value={fx} onChange={(e) => setFx(e.target.value)} /></label>
-                  <label className="field"><span className="lab">Full-year revenue estimate (MSEK)</span>
-                    <input type="number" value={annualRev} onChange={(e) => setAnnualRev(e.target.value)} /></label>
-                </div>
+                <label className="field"><span className="lab">Full-year revenue estimate (MSEK)</span>
+                  <input type="number" value={annualRev} onChange={(e) => setAnnualRev(e.target.value)} /></label>
                 <div className="grid c3" style={{ marginTop: 16 }}>
                   <div className="stat"><div className="v">{fmtM(rev5mo)}</div><div className="l">Apr–Aug actual (5 mo, slow season)</div></div>
                   <div className="stat"><div className="v">{fmtM(naive)}</div><div className="l">Flat annualization (understates)</div></div>
